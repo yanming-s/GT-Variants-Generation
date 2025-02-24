@@ -1,0 +1,3 @@
+data/zinc/raw/*
+data/zinc/processed/*
+data/zinc/__pycache__/*

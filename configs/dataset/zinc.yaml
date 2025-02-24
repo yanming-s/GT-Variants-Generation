@@ -1,0 +1,5 @@
+name: "zinc"
+datadir: "data/zinc"
+train_size: 25000
+val_size: 5000
+test_size: 5000
