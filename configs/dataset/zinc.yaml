@@ -3,3 +3,6 @@ datadir: "data/zinc"
 train_size: 25000
 val_size: 5000
 test_size: 5000
+
+# subset_percent: None
+subset_percent: {"train": 0.2, "val": 0.2, "test": 0.2} # for preliminary regression

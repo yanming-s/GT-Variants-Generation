@@ -28,7 +28,13 @@ class ZincDatasetModule(InMemoryDataset):
             self.split_idx = 2
         self.num = num
         super().__init__(root, transform, pre_transform, pre_filter)
-        self.data, self.slices = torch.load(self.processed_paths[self.split_idx], weights_only=False)
+        data, slices = torch.load(self.processed_paths[self.split_idx], weights_only=False)
+        self.data, self.slices = self._extract_subset(data, slices, self.num[self.split])
+    
+    def _extract_subset(self, data, slices, num):
+        subset_data = {key: value[:num] for key, value in data.items()}
+        subset_slices = {key: value[:num + 1] for key, value in slices.items()}
+        return subset_data, subset_slices
     
     @property
     def raw_file_names(self):
@@ -65,9 +71,9 @@ class ZincDatasetModule(InMemoryDataset):
             [n_train, n_val + n_train, n_val + n_train + n_test]
         )
         # save the split dataset
-        train.to_csv(os.path.join(self.raw_dir, 'train_zinc.csv'))
-        val.to_csv(os.path.join(self.raw_dir, 'val_zinc.csv'))
-        test.to_csv(os.path.join(self.raw_dir, 'test_zinc.csv'))
+        train.to_csv(os.path.join(self.raw_dir, 'train_zinc.csv'), index=False)
+        val.to_csv(os.path.join(self.raw_dir, 'val_zinc.csv'), index=False)
+        test.to_csv(os.path.join(self.raw_dir, 'test_zinc.csv'), index=False)
 
     def process(self):
         # atom and bond types
@@ -77,8 +83,9 @@ class ZincDatasetModule(InMemoryDataset):
         raw_path = self.split_paths[self.split_idx]
         dataset = pd.read_csv(raw_path)
         smile_list = dataset["smiles"].tolist()
+        logp_list = dataset["logp"].tolist()
         data_list = []
-        for _, smile in enumerate(tqdm(smile_list, desc=f"Processing {self.split} data")):
+        for i, smile in enumerate(tqdm(smile_list, desc=f"Processing {self.split} data")):
             mol = Chem.MolFromSmiles(smile)
             num = mol.GetNumAtoms()
             # atom processing
@@ -103,7 +110,8 @@ class ZincDatasetModule(InMemoryDataset):
             edge_index = edge_index[:, perm]
             edge_attr = edge_attr[perm]
             x = F.one_hot(torch.tensor(type_idx), num_classes=len(ATOM_LIST)).float()
-            data = Data(x=x, edge_index=edge_index, edge_attr=edge_attr)
+            y = torch.tensor([logp_list[i]], dtype=torch.float)
+            data = Data(x=x, edge_index=edge_index, edge_attr=edge_attr, y=y)
             data_list.append(data)
         # save the processed data
         torch.save(self.collate(data_list), self.processed_paths[self.split_idx])
@@ -121,6 +129,13 @@ class ZincDataset(LightningDataset):
             "val": cfg.dataset.val_size,
             "test": cfg.dataset.test_size
         }
+        if cfg.dataset.subset_percent:
+            subset_percent = cfg.dataset.subset_percent
+            nums = {
+                "train": int(subset_percent["train"] * nums["train"]),
+                "val": int(subset_percent["val"] * nums["val"]),
+                "test": int(subset_percent["test"] * nums["test"])
+            }
         train_dataset = ZincDatasetModule("train", nums, root_path)
         val_dataset = ZincDatasetModule("val", nums, root_path)
         test_dataset = ZincDatasetModule("test", nums, root_path)
@@ -128,7 +143,7 @@ class ZincDataset(LightningDataset):
             train_dataset=train_dataset,
             val_dataset=val_dataset,
             test_dataset=test_dataset,
-            batch_size=cfg.train.batch_size
+            batch_size=cfg.train_and_test.batch_size
         )
     
     def __getitem__(self, idx):
