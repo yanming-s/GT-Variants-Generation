@@ -18,6 +18,9 @@ RAW_URL = "http://deepchemdata.s3-us-west-1.amazonaws.com/datasets/zinc15_250K_2
 
 
 class ZincDatasetModule(InMemoryDataset):
+    """
+    ZINC dataset module (for training, validation, and testing set seperately)
+    """
     def __init__(self, split, num, root, transform = None, pre_transform = None, pre_filter = None):
         self.split = split
         if split == "train":
@@ -32,6 +35,12 @@ class ZincDatasetModule(InMemoryDataset):
         self.data, self.slices = self._extract_subset(data, slices, self.num[self.split])
     
     def _extract_subset(self, data, slices, num):
+        """
+        Extract a subset of the dataset
+            - data: the dataset
+            - slices: the slices of the dataset
+            - num: the number of samples to extract
+        """
         subset_data = {key: value[:num] for key, value in data.items()}
         subset_slices = {key: value[:num + 1] for key, value in slices.items()}
         return subset_data, subset_slices
@@ -55,6 +64,9 @@ class ZincDatasetModule(InMemoryDataset):
         return ['train.pt', 'val.pt', 'test.pt']
 
     def download(self):
+        """
+        Download the ZINC dataset
+        """
         try:
             file_path = download_url(RAW_URL, self.raw_dir)
             extract_tar(file_path, self.raw_dir, mode='r:gz')
@@ -76,6 +88,9 @@ class ZincDatasetModule(InMemoryDataset):
         test.to_csv(os.path.join(self.raw_dir, 'test_zinc.csv'), index=False)
 
     def process(self):
+        """
+        Process the ZINC dataset
+        """
         # atom and bond types
         atom_types = {atom: i for i, atom in enumerate(ATOM_LIST)}
         bond_types = {bond: i for i, bond in enumerate(BOND_LIST)}
@@ -100,7 +115,7 @@ class ZincDatasetModule(InMemoryDataset):
                 start, end = bond.GetBeginAtomIdx(), bond.GetEndAtomIdx()
                 row += [start, end]
                 col += [end, start]
-                edge_type += [bond_types[bond.GetBondType()]] * 2
+                edge_type += [bond_types[bond.GetBondType()] + 1] * 2
             if len(row) == 0:
                 continue
             edge_index = torch.tensor([row, col], dtype=torch.long)
@@ -120,16 +135,19 @@ class ZincDatasetModule(InMemoryDataset):
 
 
 class ZincDataset(LightningDataset):
+    """
+    ZINC dataset
+    """
     def __init__(self, cfg):
         self.datadir = cfg.dataset.datadir
-        base_path = pathlib.Path(os.path.realpath(__file__)).parents[2]
+        base_path = pathlib.Path(os.path.realpath(__file__)).parents[1]
         root_path = osp.join(base_path, self.datadir)
         nums = {
             "train": cfg.dataset.train_size,
             "val": cfg.dataset.val_size,
             "test": cfg.dataset.test_size
         }
-        if cfg.dataset.subset_percent:
+        if cfg.dataset.subset_percent is not None:
             subset_percent = cfg.dataset.subset_percent
             nums = {
                 "train": int(subset_percent["train"] * nums["train"]),
@@ -143,7 +161,7 @@ class ZincDataset(LightningDataset):
             train_dataset=train_dataset,
             val_dataset=val_dataset,
             test_dataset=test_dataset,
-            batch_size=cfg.train_and_test.batch_size
+            batch_size=cfg.run_config.batch_size
         )
     
     def __getitem__(self, idx):
@@ -151,3 +169,13 @@ class ZincDataset(LightningDataset):
     
     def get_train_smiles(self):
         return pd.read_csv(osp.join(self.train_dataset.processed_dir, "train_smiles.csv"))["smiles"].tolist()
+
+
+class ZincDatasetInfo:
+    """
+    ZINC dataset information
+    """
+    def __init__(self, dataset: ZincDataset):
+        self.num_node_type = len(ATOM_LIST)
+        self.num_edge_type = len(BOND_LIST)
+        self.dataset = dataset

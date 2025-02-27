@@ -1,6 +1,5 @@
 import torch
 import torch.nn as nn
-import pytorch_lightning as pl
 
 
 class Transformer_Layer(nn.Module):
@@ -8,7 +7,7 @@ class Transformer_Layer(nn.Module):
     Graph Transformer Layer
     """
     def __init__(
-            self, model: str, dense_attention: bool, hidden_dim: int,
+            self, layer_type: str, dense_attention: bool, hidden_dim: int,
             mlp_dim: int, num_heads: int, dropout: float=0.0
     ):
         super().__init__()
@@ -21,8 +20,9 @@ class Transformer_Layer(nn.Module):
         self.mlp_e = nn.Sequential(nn.Linear(hidden_dim, mlp_dim), nn.LeakyReLU(), nn.Linear(mlp_dim, hidden_dim))
         self.drop_out_x = nn.Dropout(dropout)
         self.drop_out_e = nn.Dropout(dropout)
+        
         # Multi-Head Attention Layer
-        if model == "gtv1":
+        if layer_type == "gtv1":
             from models.layers.mha import MHA_v1
             self.MHA = MHA_v1(dense_attention, hidden_dim, num_heads, dropout)
     

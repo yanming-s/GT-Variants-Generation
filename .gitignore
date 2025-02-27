@@ -1,4 +1,4 @@
 data/zinc/raw/*
 data/zinc/processed/*
-data/zinc/__pycache__/*
+preprocess/__pycache__/*
 outputs/*

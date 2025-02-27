@@ -1,6 +1,7 @@
 import torch
 import torch.nn as nn
 from models.layers.attention_dense import *
+from models.layers.attention_spares import *
 
 
 class MHA_v1(nn.Module):

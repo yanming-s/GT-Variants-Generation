@@ -6,11 +6,12 @@ import warnings
 warnings.filterwarnings("ignore", category=UserWarning)
 
 
-@hydra.main(version_base='1.3', config_path='configs', config_name='config')
+@hydra.main(version_base="1.3", config_path="configs", config_name="config")
 def main(cfg):
     # Logger Setup
     logger = logging.getLogger(__name__)
     logger.setLevel(logging.DEBUG)
+    logger.propagate = False
     file_handler = logging.FileHandler("log.txt")
     file_handler.setLevel(logging.INFO)
     console_handler = logging.StreamHandler()
@@ -23,8 +24,9 @@ def main(cfg):
 
     # Load in Dataset
     if cfg.dataset.name == "zinc":
-        from data.zinc.process_zinc import ZincDataset
-        dataset = ZincDataset(cfg)
+        from preprocess.dataset_zinc import ZincDataset, ZincDatasetInfo
+        dataset_module = ZincDataset(cfg)
+        dataset_info = ZincDatasetInfo(dataset_module)
     elif cfg.dataset.name == "perov5":
         # TODO: Implement Perov5 Dataset
         pass
@@ -33,12 +35,10 @@ def main(cfg):
     logger.info(f"Dataset {cfg.dataset.name} loaded.")
     
     # Initialize Model
-    if cfg.task.name == "regression":
-        pass
-    elif cfg.task.name == "generation":
-        pass
-    else:
-        raise ValueError(f"Task of {cfg.general.name} not supported.")
+    # if cfg.run_config.task == "regression":
+    #     pass
+    # else:
+    #     raise NotImplementedError(f"Task {cfg.run_config.task} not supported.")
 
 
 if __name__ == "__main__":

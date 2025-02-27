@@ -1,14 +1,13 @@
 defaults:
     - _self_
     - dataset : zinc
-    - task: regression
-    - train_and_test: train_default
-    - transformer_model: gtv1
-    # - generator_model: ddpm
+    - model: regression
+    - run_config: train_default
+    - transformer_layer: gtv1
 
 
 hydra:
   job:
     chdir: True
   run:
-    dir: outputs/${now:%Y-%m-%d}/${now:%H-%M-%S}-${dataset.name}-${task.name}
+    dir: outputs/${now:%Y-%m-%d}/${now:%H-%M-%S}-${dataset.name}-${run_config.task}

@@ -1,0 +1,4 @@
+num_attention_layers: 5
+num_attention_heads: 8
+hidden_dim: 256
+dropout: 0.0
