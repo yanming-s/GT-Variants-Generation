@@ -1,7 +1,7 @@
 defaults:
     - _self_
     - dataset : zinc
-    - model: regression
+    - model: graph_transformer
     - run_config: train_default
     - transformer_layer: gtv1
 

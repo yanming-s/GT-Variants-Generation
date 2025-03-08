@@ -35,10 +35,12 @@ def main(cfg):
     logger.info(f"Dataset {cfg.dataset.name} loaded.")
     
     # Initialize Model
-    # if cfg.run_config.task == "regression":
-    #     pass
-    # else:
-    #     raise NotImplementedError(f"Task {cfg.run_config.task} not supported.")
+    if cfg.run_config.task == "regression":
+        from models.regression_module import Regression_Module
+        model_module = Regression_Module(cfg, logger, dataset_info)
+    else:
+        raise NotImplementedError(f"Task {cfg.run_config.task} not supported.")
+    
 
 
 if __name__ == "__main__":

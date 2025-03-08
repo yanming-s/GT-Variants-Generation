@@ -2,7 +2,7 @@ import torch
 import torch.nn as nn
 
 
-class Transformer_Layer(nn.Module):
+class Graph_Transformer_Layer(nn.Module):
     """
     Graph Transformer Layer
     """

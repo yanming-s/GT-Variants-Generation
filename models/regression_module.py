@@ -2,11 +2,11 @@ import torch
 import torch.nn as nn
 import lightning as L
 
-from models.utils import DataBuffer
-from models.layers.transformer import Transformer_Layer
+from models.utils import to_dense
+from models.layers.transformer import Graph_Transformer_Layer
 
 
-class Transformer_Model(nn):
+class Graph_Transformer(nn):
     def __init__(self, cfg, datasetInfo):
         super().__init__()
         # Model Settings
@@ -27,7 +27,7 @@ class Transformer_Model(nn):
         self.mlp_out_x = nn.Linear(self.hidden_dim, 1)
         # Transformer Layers
         self.transformer_layers = nn.ModuleList([
-            Transformer_Layer(
+            Graph_Transformer_Layer(
                 self.layer_type, self.dense_attention, self.hidden_dim,
                 self.mlp_dim, self.num_attention_heads, self.dropout
             ) for _ in range(self.num_attention_layers)
@@ -55,9 +55,47 @@ class Transformer_Model(nn):
 
 
 class Regression_Module(L.LightningModule):
-    def __init__(self, cfg, datasetInfo):
+    def __init__(self, cfg, logger, datasetInfo):
         super().__init__()
-        self.model = Transformer_Model(cfg, datasetInfo)
-        
-    def forward(self, data):
-        pass
+        # General Settings
+        self.cfg = cfg
+        self.logger = logger
+        self.model = Graph_Transformer(cfg, datasetInfo)
+        # Training Settings
+        self.loss = nn.MSELoss()
+        self.running_loss = 0.0
+        self.batch_cnt = 0
+
+    '''
+    Training Steps
+    '''
+    def forward(self, x, e, node_mask):
+        return self.model(x, e, node_mask)
+
+    def training_step(self, batch_data, batch_idx):
+        data, node_mask = to_dense(batch_data.x, batch_data.edge_index, batch_data.edge_attr, batch_data.batch)
+        data = data.mask(node_mask)
+        x, e = data.x, data.e
+        pred = self.forward(x, e, node_mask)
+        loss = self.loss(pred, batch_data.y)
+        return loss
+    
+    def on_train_epoch_start(self):
+        self.logger.info(f"Epoch {self.current_epoch}")
+        self.running_loss = 0.0
+        self.batch_cnt = 0
+
+    def on_train_batch_end(self, outputs, batch, batch_idx, dataloader_idx):
+        self.running_loss += outputs.detach().item()
+        self.batch_cnt += 1
+
+    def on_train_epoch_end(self, outputs):
+        self.logger.info(f"Training Loss: {self.running_loss / self.batch_cnt}")
+
+    def configure_optimizers(self):
+        return torch.optim.AdamW(self.model.parameters(), lr=self.cfg.run_config.lr,
+                                 weight_decay=self.cfg.run_config.weight_decay)
+    
+    '''
+    Validation Steps
+    '''

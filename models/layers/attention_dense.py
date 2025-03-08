@@ -2,7 +2,7 @@ import torch
 import torch.nn as nn
 
 
-class attention_v1(nn.Module):
+class attention_v1_dense(nn.Module):
     def __init__(self, hidden_dim, head_dim, drop=0.0):
         super().__init__()
         self.Q = nn.Linear(hidden_dim, head_dim)
