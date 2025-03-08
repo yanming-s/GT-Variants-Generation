@@ -31,19 +31,7 @@ class ZincDatasetModule(InMemoryDataset):
             self.split_idx = 2
         self.num = num
         super().__init__(root, transform, pre_transform, pre_filter)
-        data, slices = torch.load(self.processed_paths[self.split_idx], weights_only=False)
-        self.data, self.slices = self._extract_subset(data, slices, self.num[self.split])
-    
-    def _extract_subset(self, data, slices, num):
-        """
-        Extract a subset of the dataset
-            - data: the dataset
-            - slices: the slices of the dataset
-            - num: the number of samples to extract
-        """
-        subset_data = {key: value[:num] for key, value in data.items()}
-        subset_slices = {key: value[:num + 1] for key, value in slices.items()}
-        return subset_data, subset_slices
+        self.data, self.slices = torch.load(self.processed_paths[self.split_idx], weights_only=False)
     
     @property
     def raw_file_names(self):
@@ -99,6 +87,7 @@ class ZincDatasetModule(InMemoryDataset):
         dataset = pd.read_csv(raw_path)
         smile_list = dataset["smiles"].tolist()
         logp_list = dataset["logp"].tolist()
+        mwt_list = dataset["mwt"].tolist()
         data_list = []
         for i, smile in enumerate(tqdm(smile_list, desc=f"Processing {self.split} data")):
             mol = Chem.MolFromSmiles(smile)
@@ -125,8 +114,9 @@ class ZincDatasetModule(InMemoryDataset):
             edge_index = edge_index[:, perm]
             edge_attr = edge_attr[perm]
             x = F.one_hot(torch.tensor(type_idx), num_classes=len(ATOM_LIST)).float()
-            y = torch.tensor([logp_list[i]], dtype=torch.float)
-            data = Data(x=x, edge_index=edge_index, edge_attr=edge_attr, y=y)
+            logp = torch.tensor([logp_list[i]], dtype=torch.float)
+            mwt = torch.tensor([mwt_list[i]], dtype=torch.float)
+            data = Data(x=x, edge_index=edge_index, edge_attr=edge_attr, logp=logp, mwt=mwt)
             data_list.append(data)
         # save the processed data
         torch.save(self.collate(data_list), self.processed_paths[self.split_idx])
@@ -147,13 +137,6 @@ class ZincDataset(LightningDataset):
             "val": cfg.dataset.val_size,
             "test": cfg.dataset.test_size
         }
-        if cfg.dataset.subset_percent is not None:
-            subset_percent = cfg.dataset.subset_percent
-            nums = {
-                "train": int(subset_percent["train"] * nums["train"]),
-                "val": int(subset_percent["val"] * nums["val"]),
-                "test": int(subset_percent["test"] * nums["test"])
-            }
         train_dataset = ZincDatasetModule("train", nums, root_path)
         val_dataset = ZincDatasetModule("val", nums, root_path)
         test_dataset = ZincDatasetModule("test", nums, root_path)
@@ -166,9 +149,6 @@ class ZincDataset(LightningDataset):
     
     def __getitem__(self, idx):
         return self.train_dataset[idx]
-    
-    def get_train_smiles(self):
-        return pd.read_csv(osp.join(self.train_dataset.processed_dir, "train_smiles.csv"))["smiles"].tolist()
 
 
 class ZincDatasetInfo:
@@ -177,5 +157,5 @@ class ZincDatasetInfo:
     """
     def __init__(self, dataset: ZincDataset):
         self.num_node_type = len(ATOM_LIST)
-        self.num_edge_type = len(BOND_LIST)
+        self.num_edge_type = len(BOND_LIST) + 1 # additional edge type for no edge
         self.dataset = dataset

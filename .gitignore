@@ -1,4 +1,13 @@
+# Data files
 data/zinc/raw/*
 data/zinc/processed/*
+
+# Preprocessing files
 preprocess/__pycache__/*
+
+# Model files
+models/__pycache__/*
+models/layers/__pycache__/*
+
+# Outputs
 outputs/*

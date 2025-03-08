@@ -13,7 +13,7 @@ class MHA_v1(nn.Module):
         self.drop_x = nn.Dropout(dropout)
         self.drop_e = nn.Dropout(dropout)
         if dense_attention:
-            self.heads = nn.ModuleList([attention_v1_dense(hidden_dim, head_dim, dropout) for _ in range(num_heads)])
+            self.heads = nn.ModuleList([attention_vanilla_dense(hidden_dim, head_dim, dropout) for _ in range(num_heads)])
         else:
             # TODO: Implement sparse attention
             raise NotImplementedError("Only dense attention is supported")

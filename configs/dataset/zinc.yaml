@@ -1,8 +1,5 @@
 name: "zinc"
 datadir: "data/zinc"
-train_size: 25000
-val_size: 5000
-test_size: 5000
-
-subset_percent: null
-# subset_percent: {"train": 0.2, "val": 0.2, "test": 0.2} # for preliminary testing
+train_size: 5000
+val_size: 500
+test_size: 500

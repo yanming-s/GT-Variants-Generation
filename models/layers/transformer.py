@@ -25,6 +25,9 @@ class Graph_Transformer_Layer(nn.Module):
         if layer_type == "gtv1":
             from models.layers.mha import MHA_v1
             self.MHA = MHA_v1(dense_attention, hidden_dim, num_heads, dropout)
+        else:
+            # TODO: Implement other MHA layers
+            raise NotImplementedError(f"Layer Type {layer_type} not supported.")
     
     def forward(self, x: torch.Tensor, e: torch.Tensor, node_mask: torch.Tensor):
         # Masking
