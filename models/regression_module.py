@@ -2,6 +2,7 @@ import torch
 import torch.nn as nn
 from pytorch_lightning import LightningModule
 import time
+import wandb
 
 from models.utils import to_dense
 from models.layers.transformer import Graph_Transformer_Layer
@@ -16,7 +17,7 @@ class Graph_Transformer(nn.Module):
         self.num_attention_heads = cfg.model.num_attention_heads
         self.dropout = cfg.model.dropout
         # Transformer Layer Settings
-        self.layer_type = cfg.transformer_layer.name
+        self.layer_type = cfg.transformer_layer.type
         self.dense_attention = cfg.transformer_layer.dense_attention
         self.mlp_dim = cfg.transformer_layer.mlp_dim
         # Input and Output Layers
@@ -56,11 +57,10 @@ class Graph_Transformer(nn.Module):
 
 
 class Regression_Dense_Module(LightningModule):
-    def __init__(self, cfg, logger, datasetInfo):
+    def __init__(self, cfg, datasetInfo):
         super().__init__()
         # General Settings
         self.cfg = cfg
-        self.custom_logger = logger
         self.model = Graph_Transformer(cfg, datasetInfo)
         self.pred_target = cfg.run_config.pred_target
         # Training Settings
@@ -69,7 +69,7 @@ class Regression_Dense_Module(LightningModule):
         self.batch_cnt = 0
         self.epoch_time = 0.0
         # Lightning Module Settings
-        self.save_hyperparameters(ignore="logger")
+        self.save_hyperparameters()
 
     '''
     Training Steps
@@ -93,6 +93,9 @@ class Regression_Dense_Module(LightningModule):
         self.batch_cnt += 1
         return loss
 
+    def on_train_start(self):
+        self.print("Start Training...")
+
     def on_train_epoch_start(self):
         self.running_loss = 0.0
         self.batch_cnt = 0
@@ -101,7 +104,8 @@ class Regression_Dense_Module(LightningModule):
     def on_train_epoch_end(self):
         train_loss = self.running_loss / self.batch_cnt
         epoch_time = (time.time() - self.epoch_time) / 60
-        self.custom_logger.info(f"Epoch {self.current_epoch + 1} - training loss:{train_loss:.6f}  time:{epoch_time:.2f} min")
+        wandb.log({"train_loss": train_loss, "epoch_time": epoch_time})
+        self.print(f"Epoch {self.current_epoch + 1}: training loss:{train_loss:.6f} - time:{epoch_time:.2f} min")
 
     def configure_optimizers(self):
         return torch.optim.AdamW(self.model.parameters(), lr=self.cfg.run_config.lr,
@@ -126,14 +130,18 @@ class Regression_Dense_Module(LightningModule):
         self.batch_cnt += 1
         return loss
     
+    def on_validation_start(self):
+        self.print("\nStart Validation...")
+    
     def on_validation_epoch_start(self):
         self.running_loss = 0.0
         self.batch_cnt = 0
 
     def on_validation_epoch_end(self):
         val_loss = self.running_loss / self.batch_cnt
-        self.custom_logger.info(f"Epoch {self.current_epoch + 1} - validation loss: {val_loss:.6f}")
         self.log("val_loss", val_loss)
+        wandb.log({"val_loss": val_loss})
+        self.print(f"Validation loss:{val_loss:.6f}\n")
 
     '''
     Test Steps
@@ -155,12 +163,13 @@ class Regression_Dense_Module(LightningModule):
         return loss
     
     def on_test_start(self):
-        self.custom_logger.info("Start Testing...")
+        self.print("\nStart Testing...")
     
     def on_test_epoch_start(self):
         self.running_loss = 0.0
         self.batch_cnt = 0
 
     def on_test_epoch_end(self):
-        self.custom_logger.info(f"Test Loss: {self.running_loss / self.batch_cnt:.6f}")
-        self.log("test_loss", self.running_loss / self.batch_cnt)
+        test_loss = self.running_loss / self.batch_cnt
+        wandb.log({"test_loss": test_loss})
+        self.print(f"Test Loss: {test_loss:.6f}")

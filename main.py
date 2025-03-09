@@ -1,5 +1,6 @@
 import hydra
-import logging
+from omegaconf import OmegaConf
+import wandb
 import warnings
 from omegaconf import DictConfig
 
@@ -15,19 +16,17 @@ warnings.filterwarnings("ignore", category=UserWarning)
 
 @hydra.main(version_base="1.3", config_path="configs", config_name="config")
 def main(cfg: DictConfig):
-    # Logger Setup
-    logger = logging.getLogger(__name__)
-    logger.setLevel(logging.DEBUG)
-    logger.propagate = False
-    file_handler = logging.FileHandler("log.txt")
-    file_handler.setLevel(logging.INFO)
-    console_handler = logging.StreamHandler()
-    console_handler.setLevel(logging.DEBUG)
-    formatter = logging.Formatter("%(message)s")
-    file_handler.setFormatter(formatter)
-    console_handler.setFormatter(formatter)
-    logger.addHandler(file_handler)
-    logger.addHandler(console_handler)
+    # Initialize Wandb
+    config_dict = OmegaConf.to_container(cfg, resolve=True, throw_on_missing=True)
+    kwargs = {
+        "project": "GT-Variants-Generation",
+        "name": f"{cfg.dataset.name}-{cfg.run_config.task}-{cfg.transformer_layer.name}",
+        "config": config_dict,
+        "settings": wandb.Settings(_disable_stats=True),
+        "reinit": False,
+        "mode": cfg.run_config.wandb_mode
+    }
+    wandb.init(**kwargs)
 
     # Load in Dataset
     if cfg.dataset.name == "zinc":
@@ -39,12 +38,14 @@ def main(cfg: DictConfig):
         pass
     else:
         raise ValueError(f"Dataset {cfg.dataset.name} not supported.")
-    logger.info(f"Dataset {cfg.dataset.name} loaded.")
     
+    # Resuming Training
+    # TODO: Implement resuming training
+        
     # Initialize Model
     if cfg.run_config.task == "regression":
         if cfg.transformer_layer.dense_attention:
-            model_module = Regression_Dense_Module(cfg, logger, dataset_info)
+            model_module = Regression_Dense_Module(cfg, dataset_info)
         else:
             # TODO: Implement sparse attention
             raise NotImplementedError("Only dense attention is supported.")

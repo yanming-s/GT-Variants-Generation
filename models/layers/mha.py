@@ -4,20 +4,55 @@ from models.layers.attention_dense import *
 from models.layers.attention_spares import *
 
 
-class MHA_v1(nn.Module):
-    def __init__(self, dense_attention: bool, hidden_dim: int, num_heads: int, dropout: float=0.0):  
+class Attention_Head_v1(nn.Module):
+    def __init__(self, dense_attention: bool, hidden_dim: int, head_dim: int, dropout: float=0.0):
+        super().__init__()
+        if dense_attention:
+            self.attention = attention_vanilla_dense(hidden_dim, head_dim, dropout)
+        else:
+            # TODO: Implement sparse attention
+            raise NotImplementedError("Only dense attention is supported")
+    def forward(self, x, e, node_mask):
+        return self.attention(x, e, node_mask)
+
+
+class Attention_Head_v2(nn.Module):
+    def __init__(self, dense_attention: bool, integration: str, hidden_dim: int, head_dim: int, dropout: float=0.0):
+        super().__init__()
+        self.inte_layer = None
+        if dense_attention:
+            self.self_att = attention_node_to_node_dense(hidden_dim, head_dim, dropout)
+            self.cross_att_node = attention_edge_to_node_dense(hidden_dim, head_dim, dropout)
+            self.cross_att_edge = attention_node_to_edge_dense(hidden_dim, head_dim, dropout)
+            # integration layer
+            if integration == "add":
+                self.inte_layer = nn.Linear(hidden_dim, hidden_dim)
+            elif integration == "concat":
+                self.inte_layer = nn.Linear(hidden_dim*3, hidden_dim)
+            elif integration == "none":
+                pass
+            else:
+                raise NotImplementedError(f"Integration method {integration} not supported.")
+        else:
+            # TODO: Implement sparse attention
+            raise NotImplementedError("Only dense attention is supported")
+    def forward(self, x, e, node_mask):
+        pass
+
+
+class MHA(nn.Module):
+    def __init__(self, layer_type: dict[str], dense_attention: bool, hidden_dim: int, num_heads: int, dropout: float=0.0):  
         super().__init__()
         head_dim = hidden_dim // num_heads
         self.WOx = nn.Linear(hidden_dim, hidden_dim)
         self.WOe = nn.Linear(hidden_dim, hidden_dim)
         self.drop_x = nn.Dropout(dropout)
         self.drop_e = nn.Dropout(dropout)
-        if dense_attention:
-            self.heads = nn.ModuleList([attention_vanilla_dense(hidden_dim, head_dim, dropout) for _ in range(num_heads)])
+        if layer_type["name"] == "GTv1":
+            self.heads = nn.ModuleList([Attention_Head_v1(dense_attention, hidden_dim, head_dim, dropout) for _ in range(num_heads)])
         else:
-            # TODO: Implement sparse attention
-            raise NotImplementedError("Only dense attention is supported")
-
+            # TODO: Implement other layer types
+            raise NotImplementedError(f"Layer type {layer_type} not supported.")
     def forward(self, x, e, node_mask):
         x_mask = node_mask.unsqueeze(-1) # [bs, n, 1]
         e_mask_1 = x_mask.unsqueeze(2)  # [bs, n, 1, 1]

@@ -8,8 +8,10 @@ weight_decay: 0.0
 check_val_every_n_epoch: 2
 
 save_model: True
-test_only: True
-resume: /home/yanming/GT-Variants-Generation/outputs/2025-03-08/zinc-regression-gtv1-19-47-13/checkpoints/regression-gtv1/last.ckpt
+test_only: False
+resume: null # absolute path to the model checkpoint
 
 use_gpu: True
 gpu_id: 0
+
+wandb_mode: "online"

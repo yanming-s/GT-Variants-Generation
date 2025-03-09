@@ -1,13 +1,15 @@
 import torch
 import torch.nn as nn
 
+from models.layers.mha import MHA
+
 
 class Graph_Transformer_Layer(nn.Module):
     """
     Graph Transformer Layer
     """
     def __init__(
-            self, layer_type: str, dense_attention: bool, hidden_dim: int,
+            self, layer_type: dict[str], dense_attention: bool, hidden_dim: int,
             mlp_dim: int, num_heads: int, dropout: float=0.0
     ):
         super().__init__()
@@ -20,14 +22,8 @@ class Graph_Transformer_Layer(nn.Module):
         self.mlp_e = nn.Sequential(nn.Linear(hidden_dim, mlp_dim), nn.LeakyReLU(), nn.Linear(mlp_dim, hidden_dim))
         self.drop_out_x = nn.Dropout(dropout)
         self.drop_out_e = nn.Dropout(dropout)
-        
         # Multi-Head Attention Layer
-        if layer_type == "gtv1":
-            from models.layers.mha import MHA_v1
-            self.MHA = MHA_v1(dense_attention, hidden_dim, num_heads, dropout)
-        else:
-            # TODO: Implement other MHA layers
-            raise NotImplementedError(f"Layer Type {layer_type} not supported.")
+        self.MHA = MHA(layer_type, dense_attention, hidden_dim, num_heads, dropout)
     
     def forward(self, x: torch.Tensor, e: torch.Tensor, node_mask: torch.Tensor):
         # Masking

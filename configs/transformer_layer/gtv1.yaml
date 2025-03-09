@@ -1,3 +1,3 @@
-name: "gtv1"
+type: {"name": "gtv1"}
 dense_attention: True
 mlp_dim: 256
