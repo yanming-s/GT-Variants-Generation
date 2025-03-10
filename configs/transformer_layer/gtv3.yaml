@@ -1,0 +1,28 @@
+type: {
+  "name": "gtv3",
+  "layers": [
+    {
+      "attention_type": "cross_attention_edge_to_node",
+      "shrink_node_dim": false,
+      "shrink_edge_dim": false,
+      "used_node_feature_idx": 0, # layer index of the node feature, 0 means the original node feature
+      "used_edge_feature_idx": 0, # layer index of the edge feature, 0 means the original edge feature
+    },
+    {
+      "attention_type": "self_attention_node_to_node",
+      "shrink_node_dim": true,
+      "shrink_edge_dim": false,
+      "used_node_feature_idx": 1,
+      "used_edge_feature_idx": 0,
+    },
+    {
+      "attention_type": "cross_attention_node_to_edge",
+      "shrink_node_dim": true,
+      "shrink_edge_dim": false,
+      "used_node_feature_idx": 2,
+      "used_edge_feature_idx": 0,
+    }
+  ]
+}
+dense_attention: True
+mlp_dim: 256

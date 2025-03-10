@@ -3,21 +3,25 @@ import torch.nn as nn
 from pytorch_lightning import LightningModule
 import time
 import wandb
+from omegaconf import OmegaConf
 
 from models.utils import to_dense
 from models.layers.transformer import Graph_Transformer_Layer
 
 
-class Graph_Transformer(nn.Module):
+class GT_Regression(nn.Module):
+    """
+    Regression Model using Graph Transformer
+    """
     def __init__(self, cfg, datasetInfo):
         super().__init__()
         # Model Settings
         self.hidden_dim = cfg.model.hidden_dim
-        self.num_attention_layers = cfg.model.num_attention_layers
+        self.num_transformer_layers = cfg.model.num_transformer_layers
         self.num_attention_heads = cfg.model.num_attention_heads
         self.dropout = cfg.model.dropout
         # Transformer Layer Settings
-        self.layer_type = cfg.transformer_layer.type
+        self.layer_type = OmegaConf.to_container(cfg.transformer_layer.type, resolve=True, throw_on_missing=True)
         self.dense_attention = cfg.transformer_layer.dense_attention
         self.mlp_dim = cfg.transformer_layer.mlp_dim
         # Input and Output Layers
@@ -32,7 +36,7 @@ class Graph_Transformer(nn.Module):
             Graph_Transformer_Layer(
                 self.layer_type, self.dense_attention, self.hidden_dim,
                 self.mlp_dim, self.num_attention_heads, self.dropout
-            ) for _ in range(self.num_attention_layers)
+            ) for _ in range(self.num_transformer_layers)
         ])
     def forward(self, x: torch.Tensor, e: torch.Tensor, node_mask: torch.Tensor):
         # Masking
@@ -61,7 +65,7 @@ class Regression_Dense_Module(LightningModule):
         super().__init__()
         # General Settings
         self.cfg = cfg
-        self.model = Graph_Transformer(cfg, datasetInfo)
+        self.model = GT_Regression(cfg, datasetInfo)
         self.pred_target = cfg.run_config.pred_target
         # Training Settings
         self.loss = nn.MSELoss()

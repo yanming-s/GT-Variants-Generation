@@ -1,3 +1,6 @@
-type: {"name": "gtv2", "integration": "film"}
+type: {
+  "name": "gtv2",
+  "integration": "film"
+}
 dense_attention: True
 mlp_dim: 256

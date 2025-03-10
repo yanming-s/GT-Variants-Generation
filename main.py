@@ -20,7 +20,7 @@ def main(cfg: DictConfig):
     config_dict = OmegaConf.to_container(cfg, resolve=True, throw_on_missing=True)
     kwargs = {
         "project": "GT-Variants-Generation",
-        "name": f"{cfg.dataset.name}-{cfg.run_config.task}-{cfg.transformer_layer.name}",
+        "name": f"{cfg.dataset.name}-{cfg.run_config.task}-{cfg.transformer_layer.type.name}",
         "config": config_dict,
         "settings": wandb.Settings(_disable_stats=True),
         "reinit": False,
@@ -28,7 +28,7 @@ def main(cfg: DictConfig):
     }
     wandb.init(**kwargs)
 
-    # Load in Dataset
+    # Load Dataset
     if cfg.dataset.name == "zinc":
         from preprocess.dataset_zinc import ZincDataset, ZincDatasetInfo
         dataset_module = ZincDataset(cfg)
@@ -47,17 +47,18 @@ def main(cfg: DictConfig):
         if cfg.transformer_layer.dense_attention:
             model_module = Regression_Dense_Module(cfg, dataset_info)
         else:
-            # TODO: Implement sparse attention
-            raise NotImplementedError("Only dense attention is supported.")
+            pass
+    elif cfg.run_config.task == "generation":
+        # TODO: Implement generation tasks
+        pass
     else:
-        # TODO: Implement other tasks
         raise NotImplementedError(f"Task {cfg.run_config.task} not supported.")
     
     # Callbacks
     callbacks = []
     if cfg.run_config.save_model:
         ckpt_callback = ModelCheckpoint(
-            dirpath=f"checkpoints/{cfg.run_config.task}-{cfg.transformer_layer.name}",
+            dirpath=f"checkpoints/{cfg.run_config.task}",
             filename="{epoch}",
             save_top_k=3,
             monitor="val_loss",
@@ -65,7 +66,7 @@ def main(cfg: DictConfig):
             every_n_epochs=1
         )
         last_ckpt = ModelCheckpoint(
-            dirpath=f"checkpoints/{cfg.run_config.task}-{cfg.transformer_layer.name}",
+            dirpath=f"checkpoints/{cfg.run_config.task}",
             filename="last",
             every_n_epochs=1
         )
@@ -73,7 +74,7 @@ def main(cfg: DictConfig):
         callbacks.append(last_ckpt)
     
     # Training Settings
-    gpu = torch.cuda.is_available() and cfg.run_config.use_gpu
+    gpu = torch.cuda.is_available()
     trainer = Trainer(
         accelerator="gpu" if gpu else "cpu",
         devices=[cfg.run_config.gpu_id] if gpu else 1,
@@ -89,7 +90,7 @@ def main(cfg: DictConfig):
 
     # Train or Test Model
     if not cfg.run_config.test_only:
-        trainer.fit(model_module, dataset_module, ckpt_path=cfg.run_config.resume)
+        trainer.fit(model_module, dataset_module)
         trainer.test(model_module, dataset_module, verbose=False)
     else:
         trainer.test(model_module, dataset_module, ckpt_path=cfg.run_config.resume, verbose=False)

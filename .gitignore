@@ -1,6 +1,5 @@
 # Data files
-data/zinc/raw/*
-data/zinc/processed/*
+data/*
 
 # Preprocessing files
 preprocess/__pycache__/*

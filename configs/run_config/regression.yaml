@@ -1,17 +1,15 @@
 task: "regression"
 pred_target: "logp"
 batch_size: 128
-num_epoch: 10
+num_epoch: 250
 
-lr: 0.001
+lr: 0.0001
 weight_decay: 0.0
-check_val_every_n_epoch: 2
+check_val_every_n_epoch: 25
 
 save_model: True
 test_only: False
-resume: null # absolute path to the model checkpoint
-
-use_gpu: True
-gpu_id: 0
+resume: null # absolute path to the checkpoint
 
 wandb_mode: "online"
+gpu_id: 1

@@ -37,8 +37,11 @@ class attention_vanilla_dense(nn.Module):
 
 
 class attention_node_to_node_dense(nn.Module):
-    def __init__(self, hidden_dim, head_dim, drop=0.0):
+    def __init__(self, hidden_dim, head_dim, drop=0.0, shrink_node_dim=False):
         super().__init__()
+        if shrink_node_dim:
+            # Shrink the node dimension for GTv3
+            hidden_dim = head_dim
         self.Q = nn.Linear(hidden_dim, head_dim)  # For node queries
         self.K = nn.Linear(hidden_dim, head_dim)  # For node keys
         self.V = nn.Linear(hidden_dim, head_dim)  # For node values
@@ -62,11 +65,14 @@ class attention_node_to_node_dense(nn.Module):
 
 
 class attention_edge_to_node_dense(nn.Module):
-    def __init__(self, hidden_dim, head_dim, drop=0.0):
+    def __init__(self, hidden_dim, head_dim, drop=0.0, shrink_node_dim=False, shrink_edge_dim=False):
         super().__init__()
-        self.Q_node = nn.Linear(hidden_dim, head_dim)
-        self.K_edge = nn.Linear(hidden_dim, head_dim)
-        self.V_edge = nn.Linear(hidden_dim, head_dim)
+        # Shrink the dimension for GTv3
+        node_dim = head_dim if shrink_node_dim else hidden_dim
+        edge_dim = head_dim if shrink_edge_dim else hidden_dim
+        self.Q_node = nn.Linear(node_dim, head_dim)
+        self.K_edge = nn.Linear(edge_dim, head_dim)
+        self.V_edge = nn.Linear(edge_dim, head_dim)
         self.sqrt_d = torch.sqrt(torch.tensor(head_dim))
         self.drop_att = nn.Dropout(drop)
     def forward(self, x, e, node_mask):
@@ -90,11 +96,14 @@ class attention_edge_to_node_dense(nn.Module):
 
 
 class attention_node_to_edge_dense(nn.Module):
-    def __init__(self, hidden_dim, head_dim, drop=0.0):
+    def __init__(self, hidden_dim, head_dim, drop=0.0, shrink_node_dim=False, shrink_edge_dim=False):
         super().__init__()
-        self.Q_edge = nn.Linear(hidden_dim, head_dim)
-        self.K_node = nn.Linear(hidden_dim, head_dim)
-        self.V_node = nn.Linear(hidden_dim, head_dim)
+        # Shrink the dimension for GTv3
+        node_dim = head_dim if shrink_node_dim else hidden_dim
+        edge_dim = head_dim if shrink_edge_dim else hidden_dim
+        self.Q_edge = nn.Linear(edge_dim, head_dim)
+        self.K_node = nn.Linear(node_dim, head_dim)
+        self.V_node = nn.Linear(node_dim, head_dim)
         self.sqrt_d = torch.sqrt(torch.tensor(head_dim))
         self.drop_att = nn.Dropout(drop)
     def forward(self, x, e, node_mask):

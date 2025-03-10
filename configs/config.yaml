@@ -3,10 +3,10 @@ defaults:
     - dataset : zinc
     - model: graph_transformer
     - run_config: regression
-    - transformer_layer: gtv1
+    - transformer_layer: gtv2
 
 hydra:
   job:
     chdir: True
   run:
-    dir: outputs/${now:%Y-%m-%d}/${dataset.name}-${run_config.task}-${transformer_layer.name}-${now:%H-%M-%S}
+    dir: outputs/${now:%Y-%m-%d}/${dataset.name}-${run_config.task}-${transformer_layer.type.name}-${now:%H-%M-%S}
